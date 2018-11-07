@@ -1,0 +1,497 @@
+
+<!doctype html>
+<html lang="us">
+<head>
+	<meta charset="utf-8">
+	<div id="container" style="height: 100%"></div>
+	<script src="external/jquery/jquery.js"></script>
+	<script src="jquery-ui.js"></script>
+	<script src="echarts.js"></script>
+	<title>Servo Press Monitor</title>
+	<link href="jquery-ui.css" rel="stylesheet">
+	<style>
+	body{
+		font-family: "Trebuchet MS", sans-serif;
+		margin: 50px;
+	}
+	.demoHeaders {
+		margin-top: 2em;
+	}
+	#dialog-link {
+		padding: .4em 1em .4em 20px;
+		text-decoration: none;
+		position: relative;
+	}
+	#dialog-link span.ui-icon {
+		margin: 0 5px 0 0;
+		position: absolute;
+		left: .2em;
+		top: 50%;
+		margin-top: -8px;
+	}
+	#icons {
+		margin: 0;
+		padding: 0;
+	}
+	#icons li {
+		margin: 2px;
+		position: relative;
+		padding: 4px 0;
+		cursor: pointer;
+		float: left;
+		list-style: none;
+	}
+	#icons span.ui-icon {
+		float: left;
+		margin: 0 4px;
+	}
+	.fakewindowcontain .ui-widget-overlay {
+		position: absolute;
+	}
+	select {
+		width: 200px;
+	}
+	</style>
+</head>
+<body>
+
+<h1>Welcome to jQuery UI!</h1>
+<div id="main" style="width: 960px; height: 600px; margin-left: auto; margin-right: auto; margin-top: 10px;background-color: #a45b13">
+	<div id="chart_dom" style="width: 60%;height: 60%; float: left; background-color: #8e846b"></div>
+	<div id="showResult" style="width: 40%;height: 60%; float:left; background-color: #0074c7">
+		<fieldset>
+			<legend>Check Result</legend>
+			<div class="ui-widget" id="checkOK">
+				<div id="resultDiv" class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;">
+					<p><span id="resultSpan" class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+						<strong id="resultText">OK</strong> </p>
+				</div>
+			</div>
+		</fieldset>
+	</div>
+
+</div>
+
+<script type="text/javascript">
+
+	//var Long=require(["long"]);
+	//var long_e= new Long();
+	//long_e=Long.fromString("68");
+	//console.log(long_e.toString());
+    // function stringToByte(str) {
+    //     var bytes = new Array();
+    //     var len, c;
+    //     len = str.length;
+    //     for(var i = 0; i < len; i++) {
+    //         c = str.charCodeAt(i);
+    //         if(c >= 0x010000 && c <= 0x10FFFF) {
+    //             bytes.push(((c >> 18) & 0x07) | 0xF0);
+    //             bytes.push(((c >> 12) & 0x3F) | 0x80);
+    //             bytes.push(((c >> 6) & 0x3F) | 0x80);
+    //             bytes.push((c & 0x3F) | 0x80);
+    //         } else if(c >= 0x000800 && c <= 0x00FFFF) {
+    //             bytes.push(((c >> 12) & 0x0F) | 0xE0);
+    //             bytes.push(((c >> 6) & 0x3F) | 0x80);
+    //             bytes.push((c & 0x3F) | 0x80);
+    //         } else if(c >= 0x000080 && c <= 0x0007FF) {
+    //             bytes.push(((c >> 6) & 0x1F) | 0xC0);
+    //             bytes.push((c & 0x3F) | 0x80);
+    //         } else {
+    //             bytes.push(c & 0xFF);
+    //         }
+    //     }
+    //     return bytes;
+	//
+	//
+    // }
+	//
+	//
+    // function byteToString(arr) {
+    //     if(typeof arr === 'string') {
+    //         return arr;
+    //     }
+    //     var str = '',
+    //         _arr = arr;
+    //     for(var i = 0; i < _arr.length; i++) {
+    //         var one = _arr[i].toString(2),
+    //             v = one.match(/^1+?(?=0)/);
+    //         if(v && one.length == 8) {
+    //             var bytesLength = v[0].length;
+    //             var store = _arr[i].toString(2).slice(7 - bytesLength);
+    //             for(var st = 1; st < bytesLength; st++) {
+    //                 store += _arr[st + i].toString(2).slice(2);
+    //             }
+    //             str += String.fromCharCode(parseInt(store, 2));
+    //             i += bytesLength - 1;
+    //         } else {
+    //             str += String.fromCharCode(_arr[i]);
+    //         }
+    //     }
+    //     return str;
+    // }
+	//
+    // /* Convert value as 8-bit unsigned integer to 2 digit hexadecimal number. */
+	//
+    // function hex8(val) {
+    //     val &= 0xFF;
+    //     var hex = val.toString(16).toUpperCase();
+    //     // return ("00" + hex).slice(-2);
+    //     return (hex+"00").slice(0,2);
+    // }
+	//
+    // /* Convert value as 16-bit unsigned integer to 4 digit hexadecimal number. */
+	//
+    // function hex16(val) {
+    //     val &= 0xFFFF;
+    //     var hex = val.toString(16).toUpperCase();
+    //     //var result= ("0000" + hex).slice(0,4);
+    //     //return result;
+    //     // for (i=result.length-1;i>result.length/2-1;i--){
+    //     //     result.unshift('a');
+    //     //     result.pop()
+	// 	// }
+	// 	//return result;
+	// 	//var te=hex+"0000";
+    //    return (hex+"0000").slice(0,4);
+    // }
+	//
+    // /* Convert value as 32-bit unsigned integer to 8 digit hexadecimal number. */
+	//
+    // function hex32(val) {
+    //     val &= 0xFFFFFFFF;
+    //     var hex = val.toString(16).toUpperCase();
+    //      var result= ("00000000" + hex).slice(-8);
+    //     return (hex+"00000000").slice(0,8);
+    //     // for (i=result.length-1;i>result.length/2-1;i--){
+    //     //     result.unshift(result[i]);
+    //     //     result.pop()
+    //     // }
+    //     //return result;
+    // }
+    // intToByteArray = function(/*long*/long) {
+    //     // we want to represent the input as a 8-bytes array
+    //     var byteArray = [0, 0, 0, 0,];
+	//
+    //     for ( var index = 0; index < byteArray.length; index ++ ) {
+    //         var byte = long & 0xff;
+    //         byteArray [ index ] = byte;
+    //         long = (long - byte) / 256 ;
+    //     }
+	//
+    //     return byteArray;
+    // };
+    // longToByteArray = function(/*long*/long) {
+    //     // we want to represent the input as a 8-bytes array
+    //     var byteArray = [0, 0, 0, 0, 0, 0, 0, 0];
+	//
+    //     for ( var index = 0; index < byteArray.length; index ++ ) {
+    //         var byte = long & 0xff;
+    //         byteArray [ index ] = byte;
+    //         long = (long - byte) / 256 ;
+    //     }
+	//
+    //     return byteArray;
+    // };
+	//
+    // byteArrayToLong = function(/*byte[]*/byteArray) {
+    //     var value = 0;
+    //     for ( var i = byteArray.length - 1; i >= 0; i--) {
+    //         value = (value * 256) + byteArray[i];
+    //     }
+	//
+    //     return value;
+    // };
+
+</script>
+
+<script type="text/javascript">
+    //import {buildWS} from "./WSjs";
+
+    //buildWS();
+    var posGet,forceGet,receiveStr;
+	var checkResult;
+    var date = [];
+    var data = [];
+    var date_base=[10,20,30,40,50,60,50,40,30,20,10];
+    var date_offset=5;
+    var k=120;
+    var data_max=[];
+    var data_min=[];
+    var step_index=0;
+    for (i=0;i<date_base.length;i++){
+        data_max[i]=(date_base[i]-date_offset)*k*1.1;
+        data_min[i]=(date_base[i]-date_offset)*k*0.9;
+    }
+
+    function ShowCheckResult(ifOK) {
+        if (ifOK){
+            $("#resultDiv").addClass("ui-state-highlight");
+            $("#resultDiv").removeClass("ui-state-error");
+            $("#resultSpan").addClass(" ui-icon-info");
+            $("#resultSpan").removeClass(" ui-icon-alert");
+            $("#resultText").text("OK");
+            //$("#checkOK").show();
+           // $("#checkNOK").hide();
+        }
+        else {
+            $("#resultDiv").removeClass("ui-state-highlight");
+            $("#resultDiv").addClass("ui-state-error");
+            $("#resultSpan").removeClass(" ui-icon-info");
+            $("#resultSpan").addClass(" ui-icon-alert");
+            $("#resultText").text("NOK");
+            //$("#checkNOK").show();
+           // $("#checkOK").hide();
+        }
+    }
+
+    //处理ws接收数据并检验正确性
+    function CheckData(getData) {
+        var strS=new Array();
+        strS=getData.split("&");
+        if (strS.length>1){
+            posGet=parseInt(strS[0]);
+            //forceGet=(parseInt((strS[1])))/100*k*(posGet-date_offset);
+			forceGet=parseInt(strS[1]);
+		}
+        if (posGet<10||step_index%date_base.length===0){
+            data=[];
+            date=[];
+		}else {
+            data.push(forceGet);
+            date.push(posGet);
+		}
+		if (forceGet>=data_min[data.length-1]&&forceGet<=data_max[data.length-1]) {
+		    checkResult=true;
+		    console.log("Data ok");
+		}else {
+		    checkResult=false;
+		    console.log("Data fail");
+		}
+
+        //checkResult=!checkResult;
+        //var i_index=data.length-1;
+
+        ShowCheckResult(checkResult);
+    }
+
+
+	//websocket , get data from bot sever
+    //region
+    var ws;
+    function PackBotCmd(str) {
+        //1&1&0&0&0&Read --check_none
+		var strArray=str.split("&");
+		if (strArray.length>3){
+		    var cmd_id=parseInt(strArray[0]);
+		    var cmd_option=parseInt((strArray[1]));
+		    var res_1=parseInt((strArray[2]));
+		    var res_2=parseInt((strArray[3]));
+		    var res_3=parseInt((strArray[4]));
+		    //var byte_cmd=stringToByte(strArray[5]);
+		    var mes_length=strArray[5].length;
+		    var buffer=new ArrayBuffer(40+mes_length);
+		    var headView=new DataView(buffer);
+		    // var mesView=new Uint16Array(buffer,40,mes_length*2);
+            // for (var i = 0, strLen = strArray[5].length; i < strLen; i++) {
+            //     mesView[i] = strArray[5].charCodeAt(i);
+            // }
+            headView.setInt32(0,mes_length,true);
+            headView.setInt32(4,cmd_id,true);
+            headView.setInt32(8,cmd_option,true);
+            headView.setInt32(16,res_1,true);
+            headView.setInt32(24,res_2,true);
+            headView.setInt32(32,res_3,true);
+            for (var i=0;i<mes_length;i++){
+                headView.setUint8(40+i,strArray[5].charCodeAt(i));
+			}
+            ws.send(headView.buffer);
+
+        }
+    }
+
+    // function AnalizeBotData(buffer) {
+	// 	var dataView=new DataView(buffer);
+	// 	var step=new Array(49);
+	// 	for (var i=0;i<step.length;i++){
+	// 	    step[i]=dataView.getFloat64(40+i*8);
+	// 	    //console.log(step[i]+"\n");
+	// 	}
+	// 	var pos_step=date_base[step_index%date_base.length];
+	// 	step_index++;
+	// 	var ran=Math.random()*0.25+0.9;
+	// 	console.log(ran);
+	// 	var force_step=step[0]+(ran)*k*(pos_step-date_offset);
+	// 	CheckData(pos_step.toString()+"&"+force_step.toString());
+	//
+	//
+    // }
+    function AnalizeBotData(buffer) {
+        var dataView=new DataView(buffer);
+        var step=new Array();
+        for(var i=0;i<(dataView.length-40)/8;i++){
+            step[i]=dataView.getFloat64(432+i*8);
+		}
+        // for (var i=0;i<step.length;i++){
+        //     step[i]=dataView.getFloat64(40+i*8);
+        //     //console.log(step[i]+"\n");
+        // }
+		for (var i=0;i<step.length/2;i++){
+            var pos_step=step[2*i];
+            var force_step=step[2*i+1];
+            step_index++;
+            //var ran=Math.random()*0.25+0.9;
+            //console.log(ran);
+            //var force_step=step[0]+(ran)*k*(pos_step-date_offset);
+            CheckData(pos_step.toString()+"&"+force_step.toString());
+		}
+        // var pos_step=date_base[step_index%date_base.length];
+        // step_index++;
+        // var ran=Math.random()*0.25+0.9;
+        // console.log(ran);
+        // var force_step=step[0]+(ran)*k*(pos_step-date_offset);
+        // CheckData(pos_step.toString()+"&"+force_step.toString());
+
+
+    }
+
+    //建立websocket连接
+	function buildWS() {
+       ws=new WebSocket("ws://127.0.0.1:5866");
+       //  ws=new WebSocket("ws://10.10.10.126:5866");
+       // ws=new WebSocket("ws://120.27.231.59:8001");
+        ws.onopen=function (evt) {
+            console.log("Connection open...");
+           // ws.send("Hello");
+
+        }
+        ws.onmessage=function (evt) {
+            if (typeof evt.data=== String){
+                console.log("Received "+evt.data);
+                receiveStr=evt.data;
+			}
+			if (evt.data instanceof ArrayBuffer){
+			    console.log("receive byte"+evt.data.byteLength);
+			    AnalizeBotData(evt.data);
+			}
+
+
+        }
+        ws.onclose=function (evt) {
+            console.log("closed");
+
+        }
+    }
+
+
+    function ReadFromServer(){
+	    switch (ws.readyState) {
+			case WebSocket.CONNECTING:
+			    break;
+			case WebSocket.OPEN:
+			    ws.binaryType='arraybuffer';
+                PackBotCmd("1&1&0&0&0&Read --check_none");
+			    //ws.send(PackBotCmd("1&1&0&0&0&Read --check_none"));
+                //ws.send("hello");
+                //CheckData(receiveStr);
+			    break;
+			case  WebSocket.CLOSING:
+			    break;
+			case WebSocket.CLOSED:
+			    buildWS();
+			    break;
+        }
+
+
+	}
+	buildWS();
+    setInterval(ReadFromServer,1000);
+//
+	// echart
+    //region
+    var dom = document.getElementById("chart_dom");
+    var myChart = echarts.init(dom);
+    //var app = {};
+    option = null;
+    //var base = +new Date(2014, 9, 3);
+    //var oneDay = 24 * 3600 * 1000;
+
+    //var now = new Date(base);
+
+
+    /*function addData(shift) {
+        now = [now.getFullYear(), now.getMonth() + 1, now.getDate()].join('/');
+        date.push(now);
+        //data.push((Math.random() - 0.4) * 10 + data[data.length - 1]);
+		data.push(forceGet);
+
+        if (shift) {
+            date.shift();
+            data.shift();
+        }
+
+        now = new Date(+new Date(now) + oneDay);
+    }*/
+
+    // for (var i = 1; i < 100; i++) {
+    //     addData();
+    // }
+
+    option = {
+        xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: date_base
+        },
+        yAxis: {
+            boundaryGap: [0, '50%'],
+            type: 'value'
+        },
+        series: [
+            {
+                name:'RT',
+                type:'line',
+                //smooth:true,
+                symbol: 'none',
+                stack: 'a',
+                // areaStyle: {
+                //     normal: {}
+                // },
+                data: data
+            },
+			{
+			    name:"Max",
+			    type:"line",
+				data:data_max
+			},
+			{
+                name:"Min",
+                type:"line",
+                data:data_min
+			}
+        ]
+    };
+
+    setInterval(function () {
+        //addData(true);
+        myChart.setOption({
+            xAxis: {
+                data: date_base
+            },
+            series: [{
+                name:'成交',
+                data: data
+            }]
+        });
+    }, 500);;
+    if (option && typeof option === "object") {
+        myChart.setOption(option, true);
+    }
+    //endregion
+</script>
+
+
+
+
+
+</body>
+</html>

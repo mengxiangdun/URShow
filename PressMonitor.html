@@ -1,0 +1,578 @@
+
+<!doctype html>
+<html lang="us">
+<head>
+    <meta charset="utf-8">
+    <div id="container" style="height: 100%"></div>
+    <script src="external/jquery/jquery.js"></script>
+    <script src="jquery-ui.js"></script>
+    <script src="echarts.js"></script>
+    <script src="Build/UnityLoader.js"></script>
+    <title>Servo Press Monitor</title>
+    <link href="jquery-ui.css" rel="stylesheet">
+    <style>
+        body{
+            font-family: "Trebuchet MS", sans-serif;
+            margin: 50px;
+        }
+        .demoHeaders {
+            margin-top: 2em;
+        }
+        #dialog-link {
+            padding: .4em 1em .4em 20px;
+            text-decoration: none;
+            position: relative;
+        }
+        #dialog-link span.ui-icon {
+            margin: 0 5px 0 0;
+            position: absolute;
+            left: .2em;
+            top: 50%;
+            margin-top: -8px;
+        }
+        #icons {
+            margin: 0;
+            padding: 0;
+        }
+        #icons li {
+            margin: 2px;
+            position: relative;
+            padding: 4px 0;
+            cursor: pointer;
+            float: left;
+            list-style: none;
+        }
+        #icons span.ui-icon {
+            float: left;
+            margin: 0 4px;
+        }
+        .fakewindowcontain .ui-widget-overlay {
+            position: absolute;
+        }
+        select {
+            width: 200px;
+        }
+        html {
+            box-sizing: border-box;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .logo {
+            display: block;
+            width: max-width: 80vw;
+            height: max-height: 60vh;
+        }
+
+        .progress {
+            margin: 1.5em;
+            border: 1px solid white;
+            width: 50vw;
+            display: none;
+        }
+        .progress .full {
+            margin: 2px;
+            background: white;
+            height: 1em;
+            transform-origin: top left;
+        }
+
+        #loader {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner,
+        .spinner:after {
+            border-radius: 50%;
+            width: 5em;
+            height: 5em;
+        }
+        .spinner {
+            margin: 10px;
+            font-size: 10px;
+            position: relative;
+            text-indent: -9999em;
+
+            transform: translateZ(0);
+            animation: spinner-spin 1.1s infinite linear;
+        }
+        @keyframes spinner-spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<h1>Welcome to Kaanh Intelligence</h1>
+<!--<button id="stop">Stop</button>-->
+<!--<input id="serverIP" placeholder="Enter server ip"/>-->
+<div id="main" style="width: 960px; height: 600px; margin-left: auto; margin-right: auto; margin-top: 10px">
+    <div id="chart_dom" style="width: 50%;height: 60%; float: left;background-color: beige;"></div>
+    <div style="width: 50%;height: 60%; float:left">
+        <div id="gameContainer"  style="width: 100%;height: 100%">
+
+        </div>
+        <div id="loader" style="width: 30%;height: 100%;left: auto;float: left">
+            <!--<img class="logo" src="logo.png">-->
+            <div class="spinner" style="width: 50%;float: left"></div>
+            <div class="progress" style="width: 50%;float: left"><div class="full" ></div></div>
+        </div>
+    </div>
+
+    <div id="showResult"style="width: 50%;height: 40%; float:left" >
+        <div id="XYZ_field"></div>
+        <fieldset>
+            <legend>Check Result</legend>
+            <div class="ui-widget" id="checkOK">
+                <div id="resultDiv" class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;">
+                    <p><span id="resultSpan" class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+                        <strong id="resultText">OK</strong> </p>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+
+</div>
+
+<div id="ThreeDShow">
+
+
+</div>
+<script type="text/javascript">
+    var serverIP="ws://127.0.0.1:5866";
+    var url=location.search;
+    var request=new Object();
+if (url.indexOf("?")>-1){
+    var str=url.substr(1);
+    strs=str.split("&");
+    for (var i=0;i<strs.length;i++){
+        request[strs[i].split("=")[0]]=unescape(strs[i].split("=")[1]);
+    }
+}
+if (request["ServerIp"]!=null&&request["ServerIp"]!=""){
+    serverIP=request["ServerIp"];
+}
+
+console.log(serverIP);
+
+</script>
+
+<script type="text/javascript">
+    //import {buildWS} from "./WSjs";
+
+    //buildWS();
+    var posGet,forceGet,receiveStr;
+    var checkResult;
+    var date = [];
+    var data = [];
+    var vel=[];
+    var current=[];
+    var date_base=[10,20,30,40,50,60,50,40,30,20,10];
+    var date_offset=5;
+    var k=120;
+    var data_max=[];
+    var data_min=[];
+    var step_index=0;
+    for (i=0;i<date_base.length;i++){
+        data_max[i]=(date_base[i]-date_offset)*k*1.1;
+        data_min[i]=(date_base[i]-date_offset)*k*0.9;
+    }
+
+    function ShowCheckResult(ifOK) {
+        if (ifOK){
+            $("#resultDiv").addClass("ui-state-highlight");
+            $("#resultDiv").removeClass("ui-state-error");
+            $("#resultSpan").addClass(" ui-icon-info");
+            $("#resultSpan").removeClass(" ui-icon-alert");
+            $("#resultText").text("OK");
+            //$("#checkOK").show();
+            // $("#checkNOK").hide();
+        }
+        else {
+            $("#resultDiv").removeClass("ui-state-highlight");
+            $("#resultDiv").addClass("ui-state-error");
+            $("#resultSpan").removeClass(" ui-icon-info");
+            $("#resultSpan").addClass(" ui-icon-alert");
+            $("#resultText").text("NOK");
+            //$("#checkNOK").show();
+            // $("#checkOK").hide();
+        }
+    }
+
+    //处理ws接收数据并检验正确性
+    function CheckData(forceGet,posGet,velGet,curGet) {
+        // var strS=new Array();
+        // strS=getData.split("&");
+        // if (strS.length>1){
+        //     posGet=parseInt(strS[0]);
+        //     //forceGet=(parseInt((strS[1])))/100*k*(posGet-date_offset);
+        //     forceGet=parseInt(strS[1]);
+        // }
+        //data.push(forceGet);
+        data.push(Number.parseFloat(forceGet).toFixed(2));
+        vel.push(velGet);
+        current.push(curGet);
+        //console.log("force:"+forceGet);
+        //date.push(posGet);
+        date.push(Number.parseFloat(posGet).toFixed(2));
+        //console.log("pos:"+posGet);
+        //console.log("data length:"+date.length);
+        if (date.length>10000){
+            date.shift();
+            data.shift();
+            vel.shift();
+            current.shift();
+        }
+        if (posGet<0.03) {
+            // date=[];
+            // data=[];
+            //console.log("press go back!!!")
+        }
+        // if (posGet<10||step_index%date_base.length===0){
+        //     data=[];
+        //     date=[];
+        // }else {
+        //     data.push(forceGet);
+        //     date.push(posGet);
+        // }
+        if (forceGet>=data_min[data.length-1]&&forceGet<=data_max[data.length-1]) {
+            checkResult=true;
+            console.log("Data ok");
+        }else {
+            checkResult=false;
+            console.log("Data fail");
+        }
+
+        //checkResult=!checkResult;
+        //var i_index=data.length-1;
+
+        ShowCheckResult(checkResult);
+    }
+
+
+    //websocket , get data from bot sever
+    //region
+    var ws;
+    function PackBotCmd(str) {
+        //1&1&0&0&0&Read --check_none
+        var strArray=str.split("&");
+        if (strArray.length>3){
+            var cmd_id=parseInt(strArray[0]);
+            var cmd_option=parseInt((strArray[1]));
+            var res_1=parseInt((strArray[2]));
+            var res_2=parseInt((strArray[3]));
+            var res_3=parseInt((strArray[4]));
+            //var byte_cmd=stringToByte(strArray[5]);
+            var mes_length=strArray[5].length;
+            var buffer=new ArrayBuffer(40+mes_length);
+            var headView=new DataView(buffer);
+            // var mesView=new Uint16Array(buffer,40,mes_length*2);
+            // for (var i = 0, strLen = strArray[5].length; i < strLen; i++) {
+            //     mesView[i] = strArray[5].charCodeAt(i);
+            // }
+            headView.setInt32(0,mes_length,true);
+            headView.setInt32(4,cmd_id,true);
+            headView.setInt32(8,cmd_option,true);
+            headView.setInt32(16,res_1,true);
+            headView.setInt32(24,res_2,true);
+            headView.setInt32(32,res_3,true);
+            for (var i=0;i<mes_length;i++){
+                headView.setUint8(40+i,strArray[5].charCodeAt(i));
+            }
+            ws.send(headView.buffer);
+
+        }
+    }
+
+    var mid_value=0;
+    function AnalizeBotData(buffer) {
+        var dataView=new DataView(buffer);
+        //console.log("buffer length:"+buffer.byteLength);
+        var step=new Array();
+        var length=dataView.getInt32(432,true);
+        //console.log("data length:"+length);
+        for(var i=0;i<(buffer.byteLength-436)/8;i++){
+            step[i]=dataView.getFloat64(436+i*8,true);
+            //console.log(i.toString()+":"+step[i]);
+        }
+        var pq="";
+        for (var i=0;i<49;i++){
+            pq+=dataView.getFloat64(40+i*8,true).toString()+"&";
+
+        }
+
+        for (var i=0;i<step.length/4;i++){
+            var pos_step=step[4*i];
+            var vel_step=step[4*i+1];
+            var cur_step=step[4*i+2];
+            var force_step=step[4*i+3];
+            step_index++;
+            CheckData(pos_step,force_step,vel_step,cur_step);
+
+
+        }
+
+
+        // var a= step[0]-mid_value;
+        // a*=-1;
+        //
+        // pq+=(a.toExponential(2)).toString();
+        if (step[0]-mid_value>0) {
+            pq+="-"+(step[0]-mid_value).toString();
+        }
+        if (step[0]-mid_value<0) {
+            pq+=(step[0]-mid_value).toString().replace("-","");
+        }
+        mid_value=step[0];
+        console.log(pq);
+        try {
+            gameInstance.SendMessage("empt","ReceiveDataFromJs",pq);
+
+        }
+        catch (e) {
+
+        }
+
+    }
+
+    //建立websocket连接
+    function buildWS() {
+        ws=new WebSocket(serverIP);
+        console.log(serverIP);
+        //  ws=new WebSocket("ws://10.10.10.126:5866");
+        // ws=new WebSocket("ws://120.27.231.59:8001");
+        ws.onopen=function (evt) {
+            console.log("Connection open...");
+            // ws.send("Hello");
+
+        }
+        ws.onmessage=function (evt) {
+            if (typeof evt.data=== String){
+                console.log("Received "+evt.data);
+                receiveStr=evt.data;
+            }
+            if (evt.data instanceof ArrayBuffer){
+                console.log("receive byte"+evt.data.byteLength);
+                AnalizeBotData(evt.data);
+            }
+
+
+        }
+        ws.onclose=function (evt) {
+            console.log("closed");
+
+        }
+    }
+
+    function SendCmd(cmd){
+        switch (ws.readyState) {
+            case WebSocket.CONNECTING:
+                break;
+            case WebSocket.OPEN:
+                ws.binaryType='arraybuffer';
+                PackBotCmd(cmd);
+                //ws.send(PackBotCmd("1&1&0&0&0&Read --check_none"));
+                //ws.send("hello");
+                //CheckData(receiveStr);
+                break;
+            case  WebSocket.CLOSING:
+                break;
+            case WebSocket.CLOSED:
+                buildWS();
+                break;
+        }
+    }
+
+
+
+    function ReadFromServer(){
+        switch (ws.readyState) {
+            case WebSocket.CONNECTING:
+                break;
+            case WebSocket.OPEN:
+                ws.binaryType='arraybuffer';
+                PackBotCmd("1&1&0&0&0&Read --check_none");
+                //ws.send(PackBotCmd("1&1&0&0&0&Read --check_none"));
+                //ws.send("hello");
+                //CheckData(receiveStr);
+                break;
+            case  WebSocket.CLOSING:
+                break;
+            case WebSocket.CLOSED:
+                buildWS();
+                break;
+        }
+
+
+    }
+    buildWS();
+    setInterval(ReadFromServer,10);
+
+    // document.getElementById("serverIP").onchange=function () {
+    //     var str=document.getElementById("serverIP").value;
+    //     if (str!=""&&str!=null){
+    //         serverIP="ws://"+str+":5866";
+    //         console.log(serverIP);
+    //     }
+    //
+    // }
+    // document.getElementById("stop").onclick=function () {
+    //     SendCmd("4&1&0&0&0&stop");
+    //     ws.close();
+    //     var url="PressSetup.html?ServerIp="+escape( serverIP);
+    //     location.href=url;
+    //
+    // }
+    //
+</script>
+<script>
+    // echart
+    //region
+    document.getElementById("XYZ_field").onchange=function () {
+        GetXYZData();
+    }
+    function GetXYZData() {
+        var xyz_str=document.getElementById("XYZ_field").innerText;
+        var xyz_list=xyz_str.split("&");
+        for (var i=0;i<xyz_list.length;i++){
+            //data.push(xyz_list[0]);
+            date.push(xyz_list[1]*-1);
+            console.log(xyz_list[0]);
+        }
+    }
+    var dom = document.getElementById("chart_dom");
+    var myChart = echarts.init(dom);
+    //var app = {};
+    option = null;
+
+
+    option = {
+        xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: data
+        },
+        yAxis: {
+            boundaryGap: [0, '50%'],
+            type: 'value',
+            min:-2,
+            max:2
+        },
+        series: [
+            {
+                name:'RT',
+                type:'line',
+                //smooth:true,
+                symbol: 'none',
+                stack: 'a',
+                // areaStyle: {
+                //     normal: {}
+                // },
+                data: date,
+                // min:-1000,
+                // max:1000
+            },
+            {
+                name:"Max",
+                type:"line",
+                data:vel,
+                // min:-10,
+                // max:10
+            }
+            // {
+            //     name:"Min",
+            //     type:"line",
+            //     data:current
+            // }
+        ]
+    };
+
+    setInterval(function () {
+        //addData(true);
+        GetXYZData();
+        myChart.setOption({
+            xAxis: {
+                data: data
+            },
+            series: [{
+                name:'成交',
+                data: date
+            },
+                {
+                    name:"Max",
+                    type:"line",
+                    data:vel
+                }
+                // {
+                //     name:"Min",
+                //     type:"line",
+                //     data:current
+                // }
+            ]
+        });
+    }, 500);
+    if (option && typeof option === "object") {
+        myChart.setOption(option, true);
+    }
+    //$("#stop").button();
+    //endregion
+</script>
+<script type="text/javascript">
+    $("#stop").button();
+    $("#saveXml").button();
+    $("#run").button();
+    $( "#accordion" ).accordion({
+        heightStyle:"content",
+        collapsible: "true"
+
+    });
+
+</script>
+
+<script>
+    var gameInstance = UnityLoader.instantiate("gameContainer", "Build/8.json", {onProgress: UnityProgress});
+    function UnityProgress(gameInstance, progress) {
+        if (!gameInstance.Module) {
+            return;
+        }
+        const loader = document.querySelector("#loader");
+        if (!gameInstance.progress) {
+            const progress = document.querySelector("#loader .progress");
+            progress.style.display = "block";
+            gameInstance.progress = progress.querySelector(".full");
+            loader.querySelector(".spinner").style.display = "none";
+        }
+        gameInstance.progress.style.transform = `scaleX(${progress})`;
+        if (progress === 1 && !gameInstance.removeTimeout) {
+            gameInstance.removeTimeout = setTimeout(function() {
+                loader.style.display = "none";
+            }, 2000);
+        }
+    }
+</script>
+</body>
+</html>
